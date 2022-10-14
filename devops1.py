@@ -23,6 +23,8 @@ sns_client = boto3.client("sns")
 keyName = "Adamskey"
 # Bucket name is blank by default
 bucket_name = ""
+# this string will hold 3 random chars and 3 random ints
+randString = ""
 
 # Instance Ip List
 instance_ips = []
@@ -227,7 +229,7 @@ def listBuckets():
     print(bucket_list)
 
 
-randString = ""
+
 
 
 def randomBucketName():
