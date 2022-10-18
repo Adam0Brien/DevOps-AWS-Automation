@@ -1,6 +1,11 @@
+# Dev Ops 1 Assignment - Adam O'Brien - 20093460
+
+
 import logging
 import random as rand
+import subprocess
 import webbrowser
+import time
 
 import boto3
 import requests
@@ -26,7 +31,7 @@ randString = ""
 
 # Instance Ip List
 instance_ips = []
-instance_ids = []
+instance_ids = []  # dont touch
 instance_list = []
 bucket_list = []
 
@@ -81,6 +86,7 @@ def mainMenu():
         print("3) Launch bucket and instance")
         print("4) Terminate all instances and buckets")
         print("5) Exit")
+        print("6) List Instances")
 
         option = int(input("---->"))
 
@@ -101,7 +107,6 @@ def mainMenu():
             f = open("aobrienurls.txt", "a")
             f.write(s3Url)
             f.close()
-            mainMenu()
         if option == 4:
             terminate_instances()
             logging.info("All Instances have been terminated")
@@ -112,7 +117,9 @@ def mainMenu():
             mainMenu()
         if option == 5:
             exit()
-        if option > 4:
+        if option == 6:
+            manage_instances()
+        if option > 7:
             print("Please enter a valid option")
             mainMenu()
     except Exception as e:
@@ -128,9 +135,14 @@ def listInstances():
     print(instance_list)
 
 
+instances = []
+
+
 # Function that creates the instance using the security group and key
 def create_instances():
-    manage_instances()
+    global instance_ips
+    global instances
+    global instance_list
     try:
         instances = ec2.create_instances(
 
@@ -154,19 +166,19 @@ def create_instances():
                  sudo yum install httpd -y
                  systemctl enable httpd
                  systemctl start httpd
-                 
+
                  echo "<?php echo '<p>Hello World</p>'; ?>" >> test.php
-                 
+
                  echo '<html>' > index.html
-                 
+
                  echo 'Private IP address: ' >> index.html
                  curl http://169.254.169.254/latest/meta-data/local-ipv4 >> index.html 
-                 
+
                  echo '<br>' >> index.html
-                 
+
                  echo " Public IP address" >> index.html
                  curl http://169.254.169.254/latest/meta-data/public-ipv4 >> index.html 
-                 
+
                  cp index.html /var/www/html/index.html
 
             """,
@@ -177,23 +189,27 @@ def create_instances():
         print("Waiting for instance...")
 
         instances[0].wait_until_running()
+        print("Done waiting")
+        time.sleep(10)
         instances[0].reload()
 
         print("Instance is now running")
 
         logging.info("Instance Created")
-        logging.info("Instance " + instance_list[-1].public_ip_address + " is now running")
-        sns_client.publish(PhoneNumber="+353858275412",
-                           Message="AWS Instance " + instance_list[
-                               -1].public_ip_address + " is now Running" + " http://" + instance_list[
-                                       -1].public_ip_address)
+        logging.info("Instance " + instances[0].public_ip_address + " is now running")
+        # sns_client.publish(PhoneNumber="+353858275412",
+        #                 Message="AWS Instance " + instance_list[
+        #                     0].public_ip_address + " is now Running" + " http://" + instance_list[
+        #                            0].public_ip_address)
 
-        instance_ip = instances[-1].public_ip_address
-        instance_ips.append(instance_ip)
-        print(instance_ips[-1])
+        print(instances[0].public_ip_address)
         f = open("aobrienurls.txt", "a")
-        f.write("http://" + instance_ip)
+        f.write("http://" + instances[0].public_ip_address)
         f.close()
+        # print(instances[0].public_ip_address)
+        #manage_instances()
+        
+
 
 
     except Exception as e:
@@ -211,8 +227,11 @@ def manage_instances():
         for inst in ec2.instances.all():
             instance_list.append(inst)
             instance_ids.append(instance_list[-1].id)
+            instance_ips.append(instance_list[-1].public_ip_address)
             print(inst.id, inst.state, inst.public_ip_address)
-    except:
+
+    except Exception as e:
+        print(e)
         print("Instances cannot be listed - No instances exist")
 
 
@@ -253,18 +272,18 @@ def create_bucket():
         try:
             response = s3.create_bucket(Bucket=bucket_name, ACL='public-read')
             response.wait_until_exists()
-            print(response)
+            #print(response)
             logging.info(bucket_name + " Bucket has been created")
             print("bucket has been created")
 
             # I made the lab code into a function with one perameter so,
-            # i can call whatever i need to upload to the bucket in this function
+            # I can call whatever i need to upload to the bucket in this function
             put_bucket('index.html')
             put_bucket('logo.jpg')
             launchWebsite()
 
-            sns_client.publish(PhoneNumber="+353858275412",
-                               Message="Your S3 Bucket Website is now running view it here " + s3Url)
+            # sns_client.publish(PhoneNumber="+353858275412",
+            #                    Message="Your S3 Bucket Website is now running view it here " + s3Url)
             print("Text message Sent")
 
         except Exception as e:
@@ -285,11 +304,13 @@ def put_bucket(object_name):
     try:
         response = s3.Object(bucket_name,
                              object_name).put(Body=open(object_name, 'rb'), ACL='public-read', ContentType="text/html")
-        print(response)
+        #print(response) #metadata
         logging.info("The " + str(object_name) + " file has been added to the s3 bucket")
         s3Url = "http://" + bucket_name + ".s3-website-us-east-1.amazonaws.com/"
+        print(object_name + " has been added to your s3 bucket")
     except Exception as e:
         print(e)
+        print("Exception")
 
 
 # Launches the s3 bucket as a website
@@ -303,10 +324,12 @@ def launchWebsite():
         bucket_website = s3.BucketWebsite(bucket_name)
 
         response = bucket_website.put(WebsiteConfiguration=website_configuration)
-        print("Response\n")
-        print(response)
+        #print("Response\n")
+        #print(response)
+
         logging.info("Website has been Launched")
         webbrowser.open_new_tab(response)  # works in website.py but does not work in wsl
+        print("S3 Website has been launched")
     except Exception as e:
         print(e)
 
@@ -329,6 +352,7 @@ def terminate_instances():
         manage_instances()
         for instance_id in instance_ids:
             instance = ec2.Instance(instance_id)
+
             response = instance.terminate()
             print(response)
     except Exception as e:
@@ -336,6 +360,8 @@ def terminate_instances():
 
 
 mainMenu()
+
+
 #
 # subprocess.run('ls')
 # subprocess.run('./monitor.sh')
@@ -351,5 +377,59 @@ mainMenu()
 # f = open("aobrienurls.txt", "a")
 # f.write(s3Url)
 # f.close()
+#
+# time.sleep(10)
 
+
+def runMonitorScript():
+    global instances
+    print(instances[0].public_ip_address)
+    scp_command = "scp -i Adamskey.pem monitor.sh ec2-user@" + str(instances[0].public_ip_address) + ":."
+    ssh_command = "ssh -i Adamskey.pem ec2-user@" + str(instances[0].public_ip_address) + " 'chmod 700 monitor.sh' "
+
+    subprocess.run(scp_command, shell=True)
+    print("scp check")
+    subprocess.run(ssh_command, shell=True)
+    print("ssh check")
+    subprocess.run("ssh -i Adamskey.pem  ec2-user@" + str(instances[0].public_ip_address) + " ' ./monitor.sh'",
+                   shell=True)
+
+
+runMonitorScript()
 # ============= End of Program ============= #
+
+
+import boto3
+from datetime import datetime, timedelta
+import time
+
+
+def cloudWatch():
+    cloudwatch = boto3.resource('cloudwatch')
+    ec2 = boto3.resource('ec2')
+
+    instid = instances[0].id  # Prompt the user to enter an Instance ID
+    instance = ec2.Instance(instid)
+    instance.monitor()  # Enables detailed monitoring on instance (1-minute intervals)
+    time.sleep(360)  # Wait 6 minutes to ensure we have some data (can remove if not a new instance)
+
+    metric_iterator = cloudwatch.metrics.filter(Namespace='AWS/EC2',
+                                                MetricName='CPUUtilization',
+                                                Dimensions=[{'Name': 'InstanceId', 'Value': instid}])
+
+    metric = list(metric_iterator)[0]  # extract first (only) element
+
+    response = metric.get_statistics(StartTime=datetime.utcnow() - timedelta(minutes=5),  # 5 minutes ago
+                                     EndTime=datetime.utcnow(),  # now
+                                     Period=300,  # 5 min intervals
+                                     Statistics=['Average'])
+
+    print("Average CPU utilisation:", response['Datapoints'][0]['Average'], response['Datapoints'][0]['Unit'])
+    # print (response)   # for debugging only
+
+
+cloudWatch()
+# TODO
+# Problem with launching insances it monitors the same instance every time the program is run
+# once this is fixed the assignment is complete
+# Look at how the instance lists are made
