@@ -379,7 +379,7 @@ def terminate_instances():
         print(e)
 
 
-mainMenu()
+#mainMenu()
 
 
 #
@@ -389,16 +389,16 @@ mainMenu()
 # OPTION 3 FROM UI
 # UNCOMMENT FOR AUTOMATION
 #
-# create_instances()
-# f = open("aobrienurls.txt", "a")
-# f.write("\n")
-# f.close()
-# create_bucket()
-# f = open("aobrienurls.txt", "a")
-# f.write(s3Url)
-# f.close()
-#
-# time.sleep(10)
+create_instances()
+f = open("aobrienurls.txt", "a")
+f.write("\n")
+f.close()
+create_bucket()
+f = open("aobrienurls.txt", "a")
+f.write(s3Url)
+f.close()
+
+time.sleep(10)
 
 
 def runMonitorScript():
