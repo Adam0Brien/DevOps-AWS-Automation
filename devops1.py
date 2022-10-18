@@ -1,6 +1,5 @@
 # Dev Ops 1 Assignment - Adam O'Brien - 20093460
 
-
 import logging
 import random as rand
 import subprocess
@@ -162,6 +161,7 @@ def create_instances():
             MinCount=1,
             MaxCount=1,
             InstanceType='t2.nano',
+            #https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
             UserData="""#!/bin/bash
                  sudo yum install httpd -y
                  systemctl enable httpd
@@ -178,6 +178,26 @@ def create_instances():
 
                  echo " Public IP address" >> index.html
                  curl http://169.254.169.254/latest/meta-data/public-ipv4 >> index.html 
+                 
+                 echo '<br>' >> index.html
+                  
+                 echo " Instance Type " >> index.html
+                 curl http://169.254.169.254/latest/meta-data/instance-type >> index.html
+                
+                 echo '<br>' >> index.html
+                 
+                 echo " Availability Zone " >> index.html
+                 curl http://169.254.169.254/latest/meta-data/placement/availability-zone >> index.html
+                 
+                 echo '<br>' >> index.html
+                  
+                 echo " Instance AMI " >> index.html
+                 curl http://169.254.169.254/latest/meta-data/ami-id >> index.html
+                 
+                 echo '<br>' >> index.html
+                 
+                 echo " Security Group " >> index.html
+                 curl http://169.254.169.254/latest/meta-data/security-groups >> index.html    
 
                  cp index.html /var/www/html/index.html
 
@@ -429,7 +449,4 @@ def cloudWatch():
 
 
 cloudWatch()
-# TODO
-# Problem with launching insances it monitors the same instance every time the program is run
-# once this is fixed the assignment is complete
-# Look at how the instance lists are made
+
