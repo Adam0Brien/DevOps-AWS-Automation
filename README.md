@@ -5,7 +5,7 @@ Developer Operations Assignment 1
 
 
 # Ec2 Instance displaying relevant metadata
-<img src="ec2.png" alt="Ec2" width="500" height="600" style="float:left" class="center">
+<img src="ec2.png" alt="Ec2" width="500" height="300" style="float:left" class="center">
 </p>
 
 
