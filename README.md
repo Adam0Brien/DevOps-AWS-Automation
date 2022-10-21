@@ -29,8 +29,8 @@ Developer Operations Assignment 1
 <p>
 <img src="monitor-cloudwatch.png" alt="Ec2" width="600" height="300" style="float:left" class="center">
 </p>
-
-<p> Cloudwatch data on AWS
+Cloudwatch data on AWS
+<p> 
 <img src="cloudwatch.png" alt="Ec2" width="600" height="300" style="float:left" class="center">
 </p>
 
