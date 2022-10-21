@@ -172,24 +172,24 @@ def create_instances():
 
                  echo " Public IP address" >> index.html
                  curl http://169.254.169.254/latest/meta-data/public-ipv4 >> index.html 
-                 
+
                  echo '<br>' >> index.html
-                  
+
                  echo " Instance Type " >> index.html
                  curl http://169.254.169.254/latest/meta-data/instance-type >> index.html
-                
+
                  echo '<br>' >> index.html
-                 
+
                  echo " Availability Zone " >> index.html
                  curl http://169.254.169.254/latest/meta-data/placement/availability-zone >> index.html
-                 
+
                  echo '<br>' >> index.html
-                  
+
                  echo " Instance AMI " >> index.html
                  curl http://169.254.169.254/latest/meta-data/ami-id >> index.html
-                 
+
                  echo '<br>' >> index.html
-                 
+
                  echo " Security Group " >> index.html
                  curl http://169.254.169.254/latest/meta-data/security-groups >> index.html    
 
@@ -286,7 +286,7 @@ def create_bucket():
 
             # sns_client.publish(PhoneNumber="+353858275412",
             #                    Message="Your S3 Bucket Website is now running view it here " + s3Url)
-            print("Text message Sent")
+            # print("Text message Sent")
         else:
             create_bucket()
             # if the first generated bucket name has the same name as a
@@ -303,8 +303,8 @@ def put_bucket(object_name):
     global bucket_name
     global s3Url
     try:
-        response = s3.Object(bucket_name,
-                             object_name).put(Body=open(object_name, 'rb'), ACL='public-read', ContentType="text/html")
+        s3.Object(bucket_name, object_name).put(Body=open(object_name, 'rb'), ACL='public-read',
+                                                ContentType="text/html")
         # print(response) #metadata
         logging.info("The " + str(object_name) + " file has been added to the s3 bucket")
         s3Url = "http://" + bucket_name + ".s3-website-us-east-1.amazonaws.com/"
@@ -359,17 +359,23 @@ def terminate_instances():
 
 
 def runMonitorScript():
-    global instances
-    print(instances[0].public_ip_address)
-
-    subprocess.run("chmod 400 newKey.pem", shell=True)
-    subprocess.run("scp -i newKey.pem monitor.sh ec2-user@" + str(instances[0].public_ip_address) + ":.", shell=True)
-    print("scp check")
-    subprocess.run("ssh -i newKey.pem ec2-user@" + str(instances[0].public_ip_address) + " 'chmod 700 monitor.sh'",
-                   shell=True)
-    print("ssh check")
-    subprocess.run("ssh -i newKey.pem  ec2-user@" + str(instances[0].public_ip_address) + " ' ./monitor.sh'",
-                   shell=True)
+    try:
+        
+        global instances
+        
+        print(instances[0].public_ip_address)
+        time.sleep(10)
+        subprocess.run("chmod 400 newKey.pem", shell=True)
+        subprocess.run("scp -i newKey.pem monitor.sh ec2-user@" + str(instances[0].public_ip_address) + ":.",
+                       shell=True)
+        print("scp check")
+        subprocess.run("ssh -i newKey.pem ec2-user@" + str(instances[0].public_ip_address) + " 'chmod 700 monitor.sh'",
+                       shell=True)
+        print("ssh check")
+        subprocess.run("ssh -i newKey.pem  ec2-user@" + str(instances[0].public_ip_address) + " ' ./monitor.sh'",
+                       shell=True)
+    except Exception as e:
+        print(e)
 
 
 def cloudWatch():
@@ -453,13 +459,12 @@ def cloudWatch():
         print("The number of bytes received by the instance on all network interfaces",
               NETWORKIN_response['Datapoints'][0]['Sum'], NETWORKIN_response['Datapoints'][0]['Unit'])
 
+
     except Exception as e:
         print(e)
 
 
-# mainMenu()
-
-
+#mainMenu()
 # OPTION 3 FROM UI
 # UNCOMMENT FOR AUTOMATION
 create_instances()
@@ -477,3 +482,5 @@ print("Running Cloudwatch")
 cloudWatch()
 
 # ============= End of Program ============= #
+
+
