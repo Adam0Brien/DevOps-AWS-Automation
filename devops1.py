@@ -364,7 +364,6 @@ def runMonitorScript():
         global instances
         
         print(instances[0].public_ip_address)
-        time.sleep(10)
         subprocess.run("chmod 400 newKey.pem", shell=True)
         subprocess.run("scp -i newKey.pem monitor.sh ec2-user@" + str(instances[0].public_ip_address) + ":.",
                        shell=True)
@@ -474,7 +473,7 @@ f.write("http://" + instances[0].public_ip_address)
 f.write("\n")
 f.write(s3Url)
 f.close()
-time.sleep(10)
+time.sleep(20)
 
 runMonitorScript()
 print("\n\n")
