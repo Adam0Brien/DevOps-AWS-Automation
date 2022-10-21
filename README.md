@@ -30,5 +30,9 @@ Developer Operations Assignment 1
 <img src="monitor-cloudwatch.png" alt="Ec2" width="600" height="300" style="float:left" class="center">
 </p>
 
+<p>
+<img src="cloudwatch.png" alt="Ec2" width="600" height="300" style="float:left" class="center">
+</p>
+
 
 
