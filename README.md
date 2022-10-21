@@ -8,9 +8,7 @@ Developer Operations Assignment 1
 <p>
 <img src="ec2.png" alt="Ec2" width="500" height="300" style="float:left" class="center">
 </p>
-<p1 style="float:right">
-hi
-</p1>
+
 
 
 
@@ -24,6 +22,12 @@ hi
 # Amazon SNS being used to show when instances and buckets are active
 <p>
 <img src="sns.jpg" alt="Ec2" width="500" height="300" style="float:left" class="center">
+</p>
+
+
+# Monitor.sh and Amazon Cloudwatch printing to terminal
+<p>
+<img src="monitor-cloudwatch.png" alt="Ec2" width="500" height="300" style="float:left" class="center">
 </p>
 
 
