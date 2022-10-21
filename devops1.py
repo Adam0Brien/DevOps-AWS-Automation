@@ -5,7 +5,7 @@ import random as rand
 import subprocess
 import webbrowser
 import time
-
+from datetime import datetime, timedelta
 import boto3
 import requests
 
@@ -18,21 +18,25 @@ s3 = boto3.resource('s3')
 s3_client = boto3.client("s3")
 s3Url = ""
 
+# Create CloudWatch client/resource
+cloudwatch = boto3.resource('cloudwatch')
+cloudwatch_client = boto3.client('cloudwatch')
+
 # SNS Variables
 sns_client = boto3.client("sns")
 
 # Key name
-keyName = "Adamskey"
+keyName = "newKey"
 # Bucket name is blank by default
 bucket_name = ""
 # this string will hold 3 random chars and 3 random ints
 randString = ""
 
 # Instance Ip List
-instance_ips = []
+
 instance_ids = []  # dont touch
 instance_list = []
-bucket_list = []
+instances = []
 
 # Setting up log file
 
@@ -128,18 +132,9 @@ def mainMenu():
 # ============= EC2 Instance Methods ============= #
 
 
-# print the instances
-
-def listInstances():
-    print(instance_list)
-
-
-instances = []
-
 
 # Function that creates the instance using the security group and key
 def create_instances():
-    global instance_ips
     global instances
     global instance_list
     try:
@@ -161,7 +156,7 @@ def create_instances():
             MinCount=1,
             MaxCount=1,
             InstanceType='t2.nano',
-            #https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
+            # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
             UserData="""#!/bin/bash
                  sudo yum install httpd -y
                  systemctl enable httpd
@@ -203,7 +198,7 @@ def create_instances():
 
             """,
             SecurityGroupIds=['sg-0f0b4ae866f08b674'],
-            KeyName="Adamskey"
+            KeyName="newKey"
 
         )
         print("Waiting for instance...")
@@ -227,8 +222,8 @@ def create_instances():
         f.write("http://" + instances[0].public_ip_address)
         f.close()
         # print(instances[0].public_ip_address)
-        #manage_instances()
-        
+        # manage_instances()
+
 
 
 
@@ -247,7 +242,6 @@ def manage_instances():
         for inst in ec2.instances.all():
             instance_list.append(inst)
             instance_ids.append(instance_list[-1].id)
-            instance_ips.append(instance_list[-1].public_ip_address)
             print(inst.id, inst.state, inst.public_ip_address)
 
     except Exception as e:
@@ -260,19 +254,10 @@ def manage_instances():
 
 def manage_buckets():
     try:
-        global bucket_list
-
-        bucket_list.clear()
         for bucket in s3.buckets.all():
-            bucket_list.append(bucket)
             print(bucket.id, bucket.state, bucket.public_ip_address)
     except Exception as e:
         print(e)
-
-
-# print the buckets
-def listBuckets():
-    print(bucket_list)
 
 
 def randomBucketName():
@@ -292,7 +277,7 @@ def create_bucket():
         try:
             response = s3.create_bucket(Bucket=bucket_name, ACL='public-read')
             response.wait_until_exists()
-            #print(response)
+            # print(response)
             logging.info(bucket_name + " Bucket has been created")
             print("bucket has been created")
 
@@ -324,7 +309,7 @@ def put_bucket(object_name):
     try:
         response = s3.Object(bucket_name,
                              object_name).put(Body=open(object_name, 'rb'), ACL='public-read', ContentType="text/html")
-        #print(response) #metadata
+        # print(response) #metadata
         logging.info("The " + str(object_name) + " file has been added to the s3 bucket")
         s3Url = "http://" + bucket_name + ".s3-website-us-east-1.amazonaws.com/"
         print(object_name + " has been added to your s3 bucket")
@@ -344,8 +329,8 @@ def launchWebsite():
         bucket_website = s3.BucketWebsite(bucket_name)
 
         response = bucket_website.put(WebsiteConfiguration=website_configuration)
-        #print("Response\n")
-        #print(response)
+        # print("Response\n")
+        # print(response)
 
         logging.info("Website has been Launched")
         webbrowser.open_new_tab(response)  # works in website.py but does not work in wsl
@@ -358,7 +343,6 @@ def launchWebsite():
 def delete_buckets():
     try:
         bucketsList = s3_client.list_buckets()
-
         for bucket in bucketsList['Buckets']:
             s3_bucket = s3.Bucket(bucket['Name'])
             s3_bucket.objects.all().delete()
@@ -372,70 +356,65 @@ def terminate_instances():
         manage_instances()
         for instance_id in instance_ids:
             instance = ec2.Instance(instance_id)
-
             response = instance.terminate()
             print(response)
     except Exception as e:
         print(e)
 
 
-#mainMenu()
-
-
-#
-# subprocess.run('ls')
-# subprocess.run('./monitor.sh')
-
-# OPTION 3 FROM UI
-# UNCOMMENT FOR AUTOMATION
-#
-create_instances()
-f = open("aobrienurls.txt", "a")
-f.write("\n")
-f.close()
-create_bucket()
-f = open("aobrienurls.txt", "a")
-f.write(s3Url)
-f.close()
-
-time.sleep(10)
-
-
 def runMonitorScript():
     global instances
     print(instances[0].public_ip_address)
-    scp_command = "scp -i Adamskey.pem monitor.sh ec2-user@" + str(instances[0].public_ip_address) + ":."
-    ssh_command = "ssh -i Adamskey.pem ec2-user@" + str(instances[0].public_ip_address) + " 'chmod 700 monitor.sh' "
+    scp_command = "scp -i newKey.pem monitor.sh ec2-user@" + str(instances[0].public_ip_address) + ":."
+    ssh_command = "ssh -i newKey.pem ec2-user@" + str(instances[0].public_ip_address) + " 'chmod 700 monitor.sh' "
 
+    subprocess.run("chmod 400 newKey.pem",shell=True)
     subprocess.run(scp_command, shell=True)
     print("scp check")
     subprocess.run(ssh_command, shell=True)
     print("ssh check")
-    subprocess.run("ssh -i Adamskey.pem  ec2-user@" + str(instances[0].public_ip_address) + " ' ./monitor.sh'",
+    subprocess.run("ssh -i newKey.pem  ec2-user@" + str(instances[0].public_ip_address) + " ' ./monitor.sh'",
                    shell=True)
 
-
-runMonitorScript()
-
-
-
-import boto3
-from datetime import datetime, timedelta
-import time
-
-
 def cloudWatch():
-    cloudwatch = boto3.resource('cloudwatch')
-    ec2 = boto3.resource('ec2')
-
     instid = instances[0].id  # Prompt the user to enter an Instance ID
+    # Create alarm
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-creating-alarms.html#
+
+    # check cloudwatch on aws
+    cloudwatch_client.put_metric_alarm(
+        AlarmName='Web_Server_CPU_Utilization',
+        ComparisonOperator='GreaterThanThreshold',
+        EvaluationPeriods=1,
+        MetricName='CPUUtilization',
+        Namespace='AWS/EC2',
+        Period=60,
+        Statistic='Average',
+        Threshold=70.0,
+        ActionsEnabled=True,
+        AlarmActions=[
+            'arn:aws:automate:us-east-1:ec2:reboot' # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricAlarm.html 
+
+        ],
+        AlarmDescription='Alarm when server CPU exceeds 70%',
+        Dimensions=[
+            {
+                'Name': 'InstanceId',
+                'Value': instid
+            },
+        ],
+        Unit='Seconds'
+    )
+
+
     instance = ec2.Instance(instid)
     instance.monitor()  # Enables detailed monitoring on instance (1-minute intervals)
-    time.sleep(360)  # Wait 6 minutes to ensure we have some data (can remove if not a new instance)
+    time.sleep(180)  # Wait 6 minutes to ensure we have some data (can remove if not a new instance)
 
     metric_iterator = cloudwatch.metrics.filter(Namespace='AWS/EC2',
                                                 MetricName='CPUUtilization',
                                                 Dimensions=[{'Name': 'InstanceId', 'Value': instid}])
+
 
     metric = list(metric_iterator)[0]  # extract first (only) element
 
@@ -446,8 +425,27 @@ def cloudWatch():
 
     print("Average CPU utilisation:", response['Datapoints'][0]['Average'], response['Datapoints'][0]['Unit'])
     # print (response)   # for debugging only
+    
+
+#mainMenu()
 
 
+# OPTION 3 FROM UI
+# UNCOMMENT FOR AUTOMATION
+
+create_instances()
+f = open("aobrienurls.txt", "a")
+f.write("\n")
+f.close()
+create_bucket()
+f = open("aobrienurls.txt", "a")
+f.write(s3Url)
+f.close()
+
+time.sleep(10)
+runMonitorScript()
+print("Running Cloudwatch")
 cloudWatch()
 
 # ============= End of Program ============= #
+
