@@ -220,8 +220,7 @@ def create_instances():
         f = open("aobrienurls.txt", "a")
         f.write("http://" + instances[0].public_ip_address)
         f.close()
-        # print(instances[0].public_ip_address)
-        # manage_instances()
+
 
 
 
@@ -260,44 +259,46 @@ def manage_buckets():
 
 
 def randomBucketName():
-    generateRandomString()
-    global bucket_name
-    bucket_name = "aobrien" + randString
-    print(bucket_name)
+    try:
+        generateRandomString()
+        global bucket_name
+        bucket_name = "aobrien" + randString
+        print(bucket_name)
+    except Exception as e:
+        print(e)
 
 
 # Creates the s3 bucket, and waits until it is running
 def create_bucket():
     global bucket_name
     global s3Url
-    randomBucketName()
-    downloadIMG()
-    if not s3.Bucket(bucket_name) in s3.buckets.all():  # Makes sure that two buckets cant have the same name
-        try:
-            response = s3.create_bucket(Bucket=bucket_name, ACL='public-read')
-            response.wait_until_exists()
-            # print(response)
-            logging.info(bucket_name + " Bucket has been created")
-            print("bucket has been created")
+    try:
+        randomBucketName()
+        downloadIMG()
+        if s3.Bucket(bucket_name) in s3.buckets.all():  # Makes sure that two buckets cant have the same name
 
-            # I made the lab code into a function with one perameter so,
-            # I can call whatever i need to upload to the bucket in this function
-            put_bucket('index.html')
-            put_bucket('logo.jpg')
-            launchWebsite()
+                response = s3.create_bucket(Bucket=bucket_name, ACL='public-read')
+                response.wait_until_exists()
+                # print(response)
+                logging.info(bucket_name + " Bucket has been created")
+                print("bucket has been created")
 
-            # sns_client.publish(PhoneNumber="+353858275412",
-            #                    Message="Your S3 Bucket Website is now running view it here " + s3Url)
-            print("Text message Sent")
+                # I made the lab code into a function with one parameter so,
+                # I can call whatever I need to upload to the bucket in this function
+                put_bucket('index.html')
+                put_bucket('logo.jpg')
+                launchWebsite()
 
-        except Exception as e:
-            print(e)
-    else:
-        create_bucket()
-        # if the first generated bucket name has the same name as a
-        # pre-existing bucket then it will call the method until an
-        # original bucket name is found
-
+                # sns_client.publish(PhoneNumber="+353858275412",
+                #                    Message="Your S3 Bucket Website is now running view it here " + s3Url)
+                print("Text message Sent")
+        else:
+            create_bucket()
+            # if the first generated bucket name has the same name as a
+            # pre-existing bucket then it will call the method until an
+            # original bucket name is found
+    except Exception as e:
+        print(e)
 
 # put files into bucket e.g. index.html
 
@@ -376,104 +377,101 @@ def runMonitorScript():
 
 
 def cloudWatch():
-    instid = instances[0].id
-
-    # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-creating-alarms.html#
-
-    # check cloudwatch on aws
-    cloudwatch_client.put_metric_alarm(
-        AlarmName='Web_Server_CPU_Utilization',
-        ComparisonOperator='GreaterThanThreshold',
-        EvaluationPeriods=1,
-        MetricName='CPUUtilization',
-        Namespace='AWS/EC2',
-        Period=60,
-        Statistic='Average',
-        Threshold=70.0,
-        ActionsEnabled=True,
-        AlarmActions=[
-            'arn:aws:automate:us-east-1:ec2:reboot'
-            # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricAlarm.html
-
-        ],
-        AlarmDescription='Alarm when server CPU exceeds 70%',
-        Dimensions=[
-            {
-                'Name': 'InstanceId',
-                'Value': instid
-            },
-        ],
-        Unit='Seconds'
-    )
-
-    # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/viewing_metrics_with_cloudwatch.html
-
-    instance = ec2.Instance(instid)
-    instance.monitor()  # Enables detailed monitoring on instance (1-minute intervals)
-    time.sleep(180)  # Wait 3 minutes to ensure we have some data (can remove if not a new instance)
-
-    CPU_metric_iterator = cloudwatch.metrics.filter(Namespace='AWS/EC2',
-                                                    MetricName='CPUUtilization',
-                                                    Dimensions=[{'Name': 'InstanceId', 'Value': instid}])
-
-    DISK_metric_iterator = cloudwatch.metrics.filter(Namespace='AWS/EC2',
-                                                     MetricName='DiskReadBytes',
-                                                     Dimensions=[{'Name': 'InstanceId', 'Value': instid}])
-
-    NETWORKIN_metric_iterator = cloudwatch.metrics.filter(Namespace='AWS/EC2',
-                                                          MetricName='NetworkIn',
-                                                          Dimensions=[{'Name': 'InstanceId', 'Value': instid}])
-
-    NetworkPacketsIn_metric_iterator = cloudwatch.metrics.filter(Namespace='AWS/EC2',
-                                                                 MetricName='NetworkPacketsIn',
-                                                                 Dimensions=[{'Name': 'InstanceId', 'Value': instid}])
-
-    CPU_Metric = list(CPU_metric_iterator)[0]  # extract first (only) element
-
-    DISK_Metric = list(DISK_metric_iterator)[0]  # extract first (only) element
-
-    NETWORKIN_Metric = list(NETWORKIN_metric_iterator)[0]
-
-    NetworkPacketsIn_metric = list(NetworkPacketsIn_metric_iterator)[0]
-
-    CPU_response = CPU_Metric.get_statistics(StartTime=datetime.utcnow() - timedelta(minutes=5),  # 5 minutes ago
-                                             EndTime=datetime.utcnow(),  # now
-                                             Period=300,  # 5 min intervals
-                                             Statistics=['Average'])
-
-    DISK_response = DISK_Metric.get_statistics(StartTime=datetime.utcnow() - timedelta(minutes=5),  # 5 minutes ago
-                                               EndTime=datetime.utcnow(),  # now
-                                               Period=300,  # 5 min intervals
-                                               Statistics=['Sum'])
-
-    NETWORKIN_response = NETWORKIN_Metric.get_statistics(StartTime=datetime.utcnow() - timedelta(minutes=5),
-                                                         # 5 minutes ago
-                                                         EndTime=datetime.utcnow(),  # now
-                                                         Period=300,  # 5 min intervals
-                                                         Statistics=['Sum'])
-
-    NetworkPacketsIn_response = NetworkPacketsIn_metric.get_statistics(
-        StartTime=datetime.utcnow() - timedelta(minutes=5),
-        # 5 minutes ago
-        EndTime=datetime.utcnow(),  # now
-        Period=300,  # 5 min intervals
-        Statistics=['Sum'])
-
-    print("Average CPU utilisation:", CPU_response['Datapoints'][0]['Average'], CPU_response['Datapoints'][0]['Unit'])
-
-    print("Bytes read from all instance store volumes available to the instance:",
-          DISK_response['Datapoints'][0]['Sum'])
-
-    print("The number of bytes received by the instance on all network interfaces",
-          NETWORKIN_response['Datapoints'][0]['Sum'], NETWORKIN_response['Datapoints'][0]['Unit'])
-
-    print("The number of packets received by the instance on all network interfaces.",
-          NetworkPacketsIn_response['Datapoints'][0]['Sum'], NetworkPacketsIn_response['Datapoints'][0]['Unit'])
-
-    # print (response)   # for debugging only
 
 
-# mainMenu()
+    try:
+        instid = instances[0].id
+
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-creating-alarms.html#
+
+        # check cloudwatch on aws
+        cloudwatch_client.put_metric_alarm(
+            AlarmName='Web_Server_CPU_Utilization',
+            ComparisonOperator='GreaterThanThreshold',
+            EvaluationPeriods=1,
+            MetricName='CPUUtilization',
+            Namespace='AWS/EC2',
+            Period=60,
+            Statistic='Average',
+            Threshold=70.0,
+            ActionsEnabled=True,
+            AlarmActions=[
+                'arn:aws:automate:us-east-1:ec2:reboot'
+                # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricAlarm.html
+                # When instance CPU Utilization exceeds 70% the ec2 instance will reboot itself
+            ],
+            AlarmDescription='Alarm when server CPU exceeds 70%',
+            Dimensions=[
+                {
+                    'Name': 'InstanceId',
+                    'Value': instid
+                },
+            ],
+            Unit='Seconds'
+        )
+
+
+
+        # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/viewing_metrics_with_cloudwatch.html
+
+        instance = ec2.Instance(instid)
+        instance.monitor()  # Enables detailed monitoring on instance (1-minute intervals)
+        time.sleep(180)  # Wait 3 minutes to ensure we have some data (can remove if not a new instance)
+
+        CPU_metric_iterator = cloudwatch.metrics.filter(Namespace='AWS/EC2',
+                                                        MetricName='CPUUtilization',
+                                                        Dimensions=[{'Name': 'InstanceId', 'Value': instid}])
+
+        DISK_metric_iterator = cloudwatch.metrics.filter(Namespace='AWS/EC2',
+                                                         MetricName='DiskReadBytes',
+                                                         Dimensions=[{'Name': 'InstanceId', 'Value': instid}])
+
+        NETWORKIN_metric_iterator = cloudwatch.metrics.filter(Namespace='AWS/EC2',
+                                                              MetricName='NetworkIn',
+                                                              Dimensions=[{'Name': 'InstanceId', 'Value': instid}])
+
+
+        CPU_Metric = list(CPU_metric_iterator)[0]  # extract first (only) element
+
+        DISK_Metric = list(DISK_metric_iterator)[0]  # extract first (only) element
+
+        NETWORKIN_Metric = list(NETWORKIN_metric_iterator)[0]
+
+
+
+        CPU_response = CPU_Metric.get_statistics(StartTime=datetime.utcnow() - timedelta(minutes=5),  # 5 minutes ago
+                                                 EndTime=datetime.utcnow(),  # now
+                                                 Period=300,  # 5 min intervals
+                                                 Statistics=['Average'])
+
+        DISK_response = DISK_Metric.get_statistics(StartTime=datetime.utcnow() - timedelta(minutes=5),  # 5 minutes ago
+                                                   EndTime=datetime.utcnow(),  # now
+                                                   Period=300,  # 5 min intervals
+                                                   Statistics=['Sum'])
+
+        NETWORKIN_response = NETWORKIN_Metric.get_statistics(StartTime=datetime.utcnow() - timedelta(minutes=5),
+                                                             # 5 minutes ago
+                                                             EndTime=datetime.utcnow(),  # now
+                                                             Period=300,  # 5 min intervals
+                                                             Statistics=['Sum'])
+
+
+
+        print("Average CPU utilisation:", CPU_response['Datapoints'][0]['Average'],
+              CPU_response['Datapoints'][0]['Unit'])
+
+        print("Bytes read from all instance store volumes available to the instance:",
+              DISK_response['Datapoints'][0]['Sum'])
+
+        print("The number of bytes received by the instance on all network interfaces",
+              NETWORKIN_response['Datapoints'][0]['Sum'], NETWORKIN_response['Datapoints'][0]['Unit'])
+
+    except Exception as e:
+        print(e)
+
+
+
+#mainMenu()
 
 
 # OPTION 3 FROM UI
@@ -494,3 +492,4 @@ print("Running Cloudwatch")
 cloudWatch()
 
 # ============= End of Program ============= #
+
