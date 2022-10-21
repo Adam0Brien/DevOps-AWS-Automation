@@ -8,7 +8,7 @@ Developer Operations Assignment 1
 <p>
 <img src="ec2.png" alt="Ec2" width="500" height="300" style="float:left" class="center">
 </p>
-<p1 style="float:left">
+<p1 style="float:right">
 hi
 </p1>
 
