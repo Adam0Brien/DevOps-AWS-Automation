@@ -22,7 +22,7 @@ s3Url = ""
 cloudwatch = boto3.resource('cloudwatch')
 cloudwatch_client = boto3.client('cloudwatch')
 
-# SNS Variables
+# SNS client
 sns_client = boto3.client("sns")
 
 # Key name
@@ -211,10 +211,10 @@ def create_instances():
 
         logging.info("Instance Created")
         logging.info("Instance " + instances[0].public_ip_address + " is now running")
-        # sns_client.publish(PhoneNumber="+353858275412",
-        #                 Message="AWS Instance " + instance_list[
-        #                     0].public_ip_address + " is now Running" + " http://" + instance_list[
-        #                            0].public_ip_address)
+        sns_client.publish(PhoneNumber="+353858275412",
+                        Message="AWS Instance " + instance_list[
+                            0].public_ip_address + " is now Running" + " http://" + instance_list[
+                                   0].public_ip_address)
 
         print(instances[0].public_ip_address)
         f = open("aobrienurls.txt", "a")
@@ -289,8 +289,8 @@ def create_bucket():
                 put_bucket('logo.jpg')
                 launchWebsite()
 
-                # sns_client.publish(PhoneNumber="+353858275412",
-                #                    Message="Your S3 Bucket Website is now running view it here " + s3Url)
+                sns_client.publish(PhoneNumber="+353858275412",
+                                   Message="Your S3 Bucket Website is now running view it here " + s3Url)
                 print("Text message Sent")
         else:
             create_bucket()
