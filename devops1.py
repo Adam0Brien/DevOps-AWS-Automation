@@ -22,7 +22,7 @@ s3Url = ""
 cloudwatch = boto3.resource('cloudwatch')
 cloudwatch_client = boto3.client('cloudwatch')
 
-# SNS client
+# SNS Variables
 sns_client = boto3.client("sns")
 
 # Key name
@@ -211,15 +211,10 @@ def create_instances():
 
         logging.info("Instance Created")
         logging.info("Instance " + instances[0].public_ip_address + " is now running")
-        sns_client.publish(PhoneNumber="+353858275412",
-                        Message="AWS Instance " + instance_list[
-                            0].public_ip_address + " is now Running" + " http://" + instance_list[
-                                   0].public_ip_address)
 
         print(instances[0].public_ip_address)
-        f = open("aobrienurls.txt", "a")
-        f.write("http://" + instances[0].public_ip_address)
-        f.close()
+
+
 
 
 
@@ -275,23 +270,23 @@ def create_bucket():
     try:
         randomBucketName()
         downloadIMG()
-        if s3.Bucket(bucket_name) in s3.buckets.all():  # Makes sure that two buckets cant have the same name
+        if not s3.Bucket(bucket_name) in s3.buckets.all():  # Makes sure that two buckets cant have the same name
 
-                response = s3.create_bucket(Bucket=bucket_name, ACL='public-read')
-                response.wait_until_exists()
-                # print(response)
-                logging.info(bucket_name + " Bucket has been created")
-                print("bucket has been created")
+            response = s3.create_bucket(Bucket=bucket_name, ACL='public-read')
+            response.wait_until_exists()
+            # print(response)
+            logging.info(bucket_name + " Bucket has been created")
+            print("bucket has been created")
 
-                # I made the lab code into a function with one parameter so,
-                # I can call whatever I need to upload to the bucket in this function
-                put_bucket('index.html')
-                put_bucket('logo.jpg')
-                launchWebsite()
+            # I made the lab code into a function with one parameter so,
+            # I can call whatever I need to upload to the bucket in this function
+            put_bucket('index.html')
+            put_bucket('logo.jpg')
+            launchWebsite()
 
-                sns_client.publish(PhoneNumber="+353858275412",
-                                   Message="Your S3 Bucket Website is now running view it here " + s3Url)
-                print("Text message Sent")
+            # sns_client.publish(PhoneNumber="+353858275412",
+            #                    Message="Your S3 Bucket Website is now running view it here " + s3Url)
+            print("Text message Sent")
         else:
             create_bucket()
             # if the first generated bucket name has the same name as a
@@ -299,6 +294,7 @@ def create_bucket():
             # original bucket name is found
     except Exception as e:
         print(e)
+
 
 # put files into bucket e.g. index.html
 
@@ -377,8 +373,6 @@ def runMonitorScript():
 
 
 def cloudWatch():
-
-
     try:
         instid = instances[0].id
 
@@ -410,8 +404,6 @@ def cloudWatch():
             Unit='Seconds'
         )
 
-
-
         # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/viewing_metrics_with_cloudwatch.html
 
         instance = ec2.Instance(instid)
@@ -430,14 +422,11 @@ def cloudWatch():
                                                               MetricName='NetworkIn',
                                                               Dimensions=[{'Name': 'InstanceId', 'Value': instid}])
 
-
         CPU_Metric = list(CPU_metric_iterator)[0]  # extract first (only) element
 
         DISK_Metric = list(DISK_metric_iterator)[0]  # extract first (only) element
 
         NETWORKIN_Metric = list(NETWORKIN_metric_iterator)[0]
-
-
 
         CPU_response = CPU_Metric.get_statistics(StartTime=datetime.utcnow() - timedelta(minutes=5),  # 5 minutes ago
                                                  EndTime=datetime.utcnow(),  # now
@@ -455,8 +444,6 @@ def cloudWatch():
                                                              Period=300,  # 5 min intervals
                                                              Statistics=['Sum'])
 
-
-
         print("Average CPU utilisation:", CPU_response['Datapoints'][0]['Average'],
               CPU_response['Datapoints'][0]['Unit'])
 
@@ -470,26 +457,23 @@ def cloudWatch():
         print(e)
 
 
-
-#mainMenu()
+# mainMenu()
 
 
 # OPTION 3 FROM UI
 # UNCOMMENT FOR AUTOMATION
-
 create_instances()
-f = open("aobrienurls.txt", "a")
-f.write("\n")
-f.close()
 create_bucket()
 f = open("aobrienurls.txt", "a")
+f.write("http://" + instances[0].public_ip_address)
+f.write("\n")
 f.write(s3Url)
 f.close()
-
 time.sleep(10)
+
 runMonitorScript()
+print("\n\n")
 print("Running Cloudwatch")
 cloudWatch()
 
 # ============= End of Program ============= #
-
