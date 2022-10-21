@@ -27,7 +27,7 @@ Developer Operations Assignment 1
 
 # Monitor.sh and Amazon Cloudwatch printing to terminal
 <p>
-<img src="monitor-cloudwatch.png" alt="Ec2" width="500" height="300" style="float:left" class="center">
+<img src="monitor-cloudwatch.png" alt="Ec2" width="600" height="300" style="float:left" class="center">
 </p>
 
 
