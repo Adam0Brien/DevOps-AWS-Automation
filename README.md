@@ -8,9 +8,9 @@ Developer Operations Assignment 1
 <p>
 <img src="ec2.png" alt="Ec2" width="500" height="300" style="float:left" class="center">
 </p>
-<p>
- test 
-</p>
+<p1 style="float:left">
+hi
+</p1>
 
 
 
