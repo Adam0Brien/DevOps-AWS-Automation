@@ -214,12 +214,6 @@ def create_instances():
 
         print(instances[0].public_ip_address)
 
-
-
-
-
-
-
     except Exception as e:
 
         print("Instance Failed")
@@ -364,6 +358,7 @@ def runMonitorScript():
         global instances
         
         print(instances[0].public_ip_address)
+        time.sleep(10)
         subprocess.run("chmod 400 newKey.pem", shell=True)
         subprocess.run("scp -i newKey.pem monitor.sh ec2-user@" + str(instances[0].public_ip_address) + ":.",
                        shell=True)
@@ -380,12 +375,15 @@ def runMonitorScript():
 def cloudWatch():
     try:
         instid = instances[0].id
+        
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-using-alarms.html
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-creating-alarms.html
+        # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricAlarm.html
 
-        # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-creating-alarms.html#
 
         # check cloudwatch on aws
         cloudwatch_client.put_metric_alarm(
-            AlarmName='Web_Server_CPU_Utilization',
+            AlarmName='Web Server CPU_Utilization, 70% Cap',
             ComparisonOperator='GreaterThanThreshold',
             EvaluationPeriods=1,
             MetricName='CPUUtilization',
@@ -396,7 +394,6 @@ def cloudWatch():
             ActionsEnabled=True,
             AlarmActions=[
                 'arn:aws:automate:us-east-1:ec2:reboot'
-                # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricAlarm.html
                 # When instance CPU Utilization exceeds 70% the ec2 instance will reboot itself
             ],
             AlarmDescription='Alarm when server CPU exceeds 70%',
@@ -449,15 +446,19 @@ def cloudWatch():
                                                              Period=300,  # 5 min intervals
                                                              Statistics=['Sum'])
 
-        print("Average CPU utilisation:", CPU_response['Datapoints'][0]['Average'],
-              CPU_response['Datapoints'][0]['Unit'])
+        cpuUtils = "Average CPU utilisation:", CPU_response['Datapoints'][0]['Average'],CPU_response['Datapoints'][0]['Unit']
 
-        print("Bytes read from all instance store volumes available to the instance:",
-              DISK_response['Datapoints'][0]['Sum'])
+        diskReadBytes = "Bytes read from all instance store volumes available to the instance:",DISK_response['Datapoints'][0]['Sum']
 
-        print("The number of bytes received by the instance on all network interfaces",
-              NETWORKIN_response['Datapoints'][0]['Sum'], NETWORKIN_response['Datapoints'][0]['Unit'])
+        network_in = "The number of bytes received by the instance on all network interfaces",NETWORKIN_response['Datapoints'][0]['Sum'], NETWORKIN_response['Datapoints'][0]['Unit']
 
+
+        logging.info(cpuUtils)
+        logging.info(diskReadBytes)
+        logging.info(network_in)
+        print(cpuUtils)
+        print(diskReadBytes)
+        print(network_in)
 
     except Exception as e:
         print(e)
@@ -473,7 +474,7 @@ f.write("http://" + instances[0].public_ip_address)
 f.write("\n")
 f.write(s3Url)
 f.close()
-time.sleep(20)
+time.sleep(10)
 
 runMonitorScript()
 print("\n\n")
@@ -481,5 +482,9 @@ print("Running Cloudwatch")
 cloudWatch()
 
 # ============= End of Program ============= #
+
+
+
+
 
 
