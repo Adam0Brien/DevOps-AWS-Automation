@@ -278,7 +278,7 @@ def create_bucket():
             put_bucket('logo.jpg')
             launchWebsite()
 
-            # sns_client.publish(PhoneNumber="+353858275412",
+            # sns_client.publish(PhoneNumber="",
             #                    Message="Your S3 Bucket Website is now running view it here " + s3Url)
             # print("Text message Sent")
         else:
