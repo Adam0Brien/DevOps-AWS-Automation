@@ -22,10 +22,9 @@ s3Url = ""
 cloudwatch = boto3.resource('cloudwatch')
 cloudwatch_client = boto3.client('cloudwatch')
 
-# SNS Variables
+# SNS client for text notifications
 sns_client = boto3.client("sns")
 
-# Key name
 keyName = "newKey"
 # Bucket name is blank by default
 bucket_name = ""
@@ -33,20 +32,15 @@ bucket_name = ""
 randString = ""
 
 # Instance Ip List
-
-instance_ids = []  # dont touch
+instance_ids = []
 instance_list = []
 instances = []
 
 # Setting up log file
 
-logging.basicConfig(
-    filename='data.log',
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    level=logging.INFO,
-    datefmt='%Y-%m-%d %H:%M:%S'),
-logging.info("Program Started!")
+logging.basicConfig(filename='data.log',format='%(asctime)s %(levelname)-8s %(message)s',level=logging.INFO,datefmt='%Y-%m-%d %H:%M:%S')
 
+logging.info("Program Started!")
 
 # ============= Utilities ============= #
 
@@ -77,30 +71,26 @@ def downloadIMG():
 
 # ============= Startup ============= #
 
-# This UI is disabled on submission because
-# the goal is for it to be an automated process
-# it was made only for MY convince
+# TUI was made for my own convinence for managing instances
 
 def mainMenu():
     try:
-        print("Amazon Automation")
+        print("AWS Automation")
         print("1) Launch instance")
         print("2) Launch bucket")
         print("3) Launch bucket and instance")
-        print("4) Terminate all instances and buckets")
-        print("5) Exit")
-        print("6) List Instances")
-
+        print("4) List Instances")
+        print("5) Terminate all instances and buckets")
+        print("6) Exit")
+       
         option = int(input("---->"))
 
         while not validateInput(option, 1, 10):
             option = int(input("---->"))
         if option == 1:
             create_instances()
-            mainMenu()
         if option == 2:
             create_bucket()
-            mainMenu()
         if option == 3:
             create_instances()
             f = open("aobrienurls.txt", "a")
@@ -111,17 +101,14 @@ def mainMenu():
             f.write(s3Url)
             f.close()
         if option == 4:
+            list_instances()
+        if option == 5:
             terminate_instances()
             logging.info("All Instances have been terminated")
-            manage_buckets()
-            logging.info("All data from buckets has been erased")
             delete_buckets()
             logging.info("All buckets have been deleted")
-            mainMenu()
-        if option == 5:
-            exit()
         if option == 6:
-            manage_instances()
+            exit()
         if option > 7:
             print("Please enter a valid option")
             mainMenu()
@@ -207,22 +194,18 @@ def create_instances():
         time.sleep(10)
         instances[0].reload()
 
-        print("Instance is now running")
+        print("Instance is now running:" + str((instances[0].public_ip_address))
+        logging.info("Instance " + instances[0].public_ip_address + "  has been created and is now running")
 
-        logging.info("Instance Created")
-        logging.info("Instance " + instances[0].public_ip_address + " is now running")
-
-        print(instances[0].public_ip_address)
 
     except Exception as e:
-
         print("Instance Failed")
         print(e)
         logging.error("Instance has failed to be created")
 
 
 # Function to list all instances
-def manage_instances():
+def list_instances():
     try:
         global instance_list
         instance_list.clear()
@@ -264,42 +247,34 @@ def create_bucket():
     try:
         randomBucketName()
         downloadIMG()
-        if not s3.Bucket(bucket_name) in s3.buckets.all():  # Makes sure that two buckets cant have the same name
-
+        
+        # Ensure no two buckets have the same name
+        if not s3.Bucket(bucket_name) in s3.buckets.all():
             response = s3.create_bucket(Bucket=bucket_name, ACL='public-read')
             response.wait_until_exists()
-            # print(response)
             logging.info(bucket_name + " Bucket has been created")
-            print("bucket has been created")
+            print("Bucket has been created")
 
-            # I made the lab code into a function with one parameter so,
-            # I can call whatever I need to upload to the bucket in this function
-            put_bucket('index.html')
-            put_bucket('logo.jpg')
-            launchWebsite()
+            upload_object_to_bucket('index.html')
+            upload_object_to_bucket('logo.jpg')
+            launch_website()
 
-            # sns_client.publish(PhoneNumber="",
-            #                    Message="Your S3 Bucket Website is now running view it here " + s3Url)
+            # Send a text message (Costs extra AWS credit)
+            # sns_client.publish(PhoneNumber="", Message="Your S3 Bucket Website is now running view it here " + s3Url)
             # print("Text message Sent")
         else:
-            create_bucket()
-            # if the first generated bucket name has the same name as a
-            # pre-existing bucket then it will call the method until an
-            # original bucket name is found
+            create_bucket() # Call the function again if the bucket name exists
     except Exception as e:
         print(e)
 
 
-# put files into bucket e.g. index.html
-
-
-def put_bucket(object_name):
+# Upload files into bucket by object_name e.g.index.html
+def upload_object_to_bucket(object_name):
     global bucket_name
     global s3Url
     try:
         s3.Object(bucket_name, object_name).put(Body=open(object_name, 'rb'), ACL='public-read',
                                                 ContentType="text/html")
-        # print(response) #metadata
         logging.info("The " + str(object_name) + " file has been added to the s3 bucket")
         s3Url = "http://" + bucket_name + ".s3-website-us-east-1.amazonaws.com/"
         print(object_name + " has been added to your s3 bucket")
@@ -309,7 +284,7 @@ def put_bucket(object_name):
 
 
 # Launches the s3 bucket as a website
-def launchWebsite():
+def launch_website():
     global bucket_name
     try:
         website_configuration = {
@@ -319,17 +294,16 @@ def launchWebsite():
         bucket_website = s3.BucketWebsite(bucket_name)
 
         response = bucket_website.put(WebsiteConfiguration=website_configuration)
-        # print("Response\n")
-        # print(response)
-
+        
         logging.info("Website has been Launched")
-        webbrowser.open_new_tab(response)  # works in website.py but does not work in wsl
+        webbrowser.open_new_tab(response)
         print("S3 Website has been launched")
     except Exception as e:
         print(e)
 
 
-# https://stackoverflow.com/questions/48649523/using-boto-to-delete-all-buckets
+
+# Delete all buckets Ref:(https://stackoverflow.com/questions/48649523/using-boto-to-delete-all-buckets)
 def delete_buckets():
     try:
         bucketsList = s3_client.list_buckets()
@@ -340,10 +314,10 @@ def delete_buckets():
     except Exception as e:
         print(e)
 
-
+# Terminate all instances
 def terminate_instances():
     try:
-        manage_instances()
+        list_instances()
         for instance_id in instance_ids:
             instance = ec2.Instance(instance_id)
             response = instance.terminate()
@@ -465,21 +439,22 @@ def cloudWatch():
 
 
 #mainMenu()
-# OPTION 3 FROM UI
-# UNCOMMENT FOR AUTOMATION
-create_instances()
-create_bucket()
-f = open("aobrienurls.txt", "a")
-f.write("http://" + instances[0].public_ip_address)
-f.write("\n")
-f.write(s3Url)
-f.close()
-time.sleep(10)
+automation_demo()
 
-runMonitorScript()
-print("\n\n")
-print("Running Cloudwatch")
-cloudWatch()
+
+def automation_demo():
+    create_instances()
+    create_bucket()
+    f = open("aobrienurls.txt", "a")
+    f.write("http://" + instances[0].public_ip_address)
+    f.write("\n")
+    f.write(s3Url)
+    f.close()
+    time.sleep(10)
+    runMonitorScript()
+    print("\n\n")
+    print("Running Cloudwatch")
+    cloudWatch()
 
 # ============= End of Program ============= #
 
